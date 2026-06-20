@@ -1,0 +1,6 @@
+{
+  "name": "Expense Tracker",
+  "description": "A elegant offline Expense and Income Tracker with beautiful visuals, categorization, history, and search filters.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
