@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        /* Active Tab Animation Accent */
+        .tab-indicator {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen pb-16 md:pb-0">
+
+    <!-- App Shell Container -->
+    <div class="max-w-6xl mx-auto px-4 py-6">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-sm">
+            <div class="flex items-center gap-3 mb-4 sm:mb-0">
+                <div class="p-3 bg-brand-100 dark:bg-brand-950/50 rounded-xl text-brand-600 dark:text-brand-500 shadow-inner">
+                    <i class="fa-solid var-icon fa-wallet text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight">Expense Tracker</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Manage Income & Expenses Offline</p>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Currency Selector -->
+                <select id="currency-selector" onchange="changeCurrency(this.value)" class="bg-slate-100 dark:bg-slate-800 border-none outline-none text-sm font-semibold rounded-lg px-3 py-2 cursor-pointer text-slate-700 dark:text-slate-200">
+                    <option value="₹">INR (₹)</option>
+                    <option value="$">USD ($)</option>
+                    <option value="€">EUR (€)</option>
+                    <option value="£">GBP (£)</option>
+                    <option value="¥">JPY (¥)</option>
+                </select>
+
+                <!-- Dark/Light Theme Toggle -->
+                <button onclick="toggleTheme()" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon text-lg"></i>
+                </button>
+
+                <!-- Trigger Add Transaction Modal -->
+                <button onclick="openModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm rounded-lg px-4 py-2.5 flex items-center gap-2 shadow-md shadow-brand-500/10 hover:shadow-brand-500/20 transition-all">
+                    <i class="fa-solid fa-plus"></i> Add New
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Tab Navigation -->
+        <nav class="flex border-b border-slate-200 dark:border-slate-800 mb-6 bg-white dark:bg-slate-900 rounded-xl p-1.5 shadow-sm">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all text-brand-600 dark:text-brand-500 bg-brand-50 dark:bg-brand-950/40 tab-btn">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </button>
+            <button onclick="switchTab('transactions')" id="tab-transactions" class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 tab-btn">
+                <i class="fa-solid fa-receipt"></i> Transactions
+            </button>
+            <button onclick="switchTab('reports')" id="tab-reports" class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 tab-btn">
+                <i class="fa-solid fa-chart-column"></i> Reports
+            </button>
+        </nav>
+
+        <!-- NAVIGATION VIEW CONTENTS -->
+
+        <!-- TAB 1: DASHBOARD VIEW -->
+        <section id="view-dashboard" class="space-y-6">
+            <!-- Summary Dashboard Widgets Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Total Balance Card -->
+                <div class="bg-gradient-to-br from-indigo-500 to-blue-600 dark:from-indigo-600 dark:to-blue-800 text-white p-6 rounded-2xl shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-indigo-100 uppercase tracking-widest mb-1">Total Balance</p>
+                        <h2 class="text-3xl font-extrabold font-mono tracking-tight" id="widget-balance">0.00</h2>
+                    </div>
+                    <div class="p-4 bg-white/10 rounded-xl">
+                        <i class="fa-solid fa-scale-balanced text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Total Income Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-2xl shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Income</p>
+                        <h2 class="text-2xl font-extrabold font-mono tracking-tight text-emerald-600 dark:text-emerald-500" id="widget-income">0.00</h2>
+                    </div>
+                    <div class="p-4 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-500 rounded-xl">
+                        <i class="fa-solid fa-circle-arrow-up text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Total Expense Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-2xl shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Expenses</p>
+                        <h2 class="text-2xl font-extrabold font-mono tracking-tight text-rose-600 dark:text-rose-500" id="widget-expense">0.00</h2>
+                    </div>
+                    <div class="p-4 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-500 rounded-xl">
+                        <i class="fa-solid fa-circle-arrow-down text-2xl"></i>
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- Dynamic Balance Gauge indicator -->
+            <div id="ratio-container" class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Expense to Income Ratio</span>
+                    <span class="text-xs font-semibold" id="ratio-percent">0%</span>
+                </div>
+                <!-- Interactive Track -->
+                <div class="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
+                    <div id="ratio-income-bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%"></div>
+                    <div id="ratio-expense-bar" class="h-full bg-rose-500 transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-2.5 text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Income Portion</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Spendings Portion</span>
+                </div>
+            </div>
+
+            <!-- Quick Add Shortcut Banner -->
+            <div class="bg-slate-100 dark:bg-slate-900/60 rounded-2xl p-4 flex justify-between items-center gap-4 flex-wrap sm:flex-nowrap">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">💡</span>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">Tip: Keep your dynamic spendings below <b>50%</b> of your income to grow your wealth!</p>
+                </div>
+                <button onclick="openModal()" class="text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm whitespace-nowrap transition-colors">
+                    Add Transaction
+                </button>
+            </div>
+
+            <!-- Recent list section -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+                <div class="flex justify-between items-center mb-5">
+                    <div>
+                        <h3 class="text-lg font-bold">Recent Transactions</h3>
+                        <p class="text-xs text-slate-500">Your latest earnings and expense records</p>
+                    </div>
+                    <button onclick="switchTab('transactions')" class="text-sm font-bold text-brand-600 dark:text-brand-500 hover:underline">
+                        See All
+                    </button>
+                </div>
+
+                <!-- Live Container -->
+                <div id="recent-transactions-list" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <!-- Dynamic Rows Go Here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: TRANSACTIONS SCREEN -->
+        <section id="view-transactions" class="space-y-6 hidden">
+            
+            <!-- Filters Card Header controls -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700 dark:text-slate-300">Search & Filter Entries</h3>
+                    <button onclick="resetFilters()" class="text-xs font-bold text-rose-500 dark:text-rose-400 hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-filter-circle-xmark"></i> Reset All
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500 pointer-events-none">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Search description, amount..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 dark:focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-slate-800 dark:text-slate-100 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none transition-all">
+                    </div>
+
+                    <!-- Category dropdown list filter -->
+                    <div>
+                        <select id="filter-category" onchange="applyFilters()" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm cursor-pointer outline-none transition-all">
+                            <option value="All">All Categories</option>
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Bills">Bills</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Date range trigger inputs -->
+                    <div class="flex items-center gap-2">
+                        <input type="date" id="filter-start-date" onchange="applyFilters()" class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-500 text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <span class="text-xs text-slate-400 font-bold">to</span>
+                        <input type="date" id="filter-end-date" onchange="applyFilters()" class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-500 text-slate-800 dark:text-slate-200 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Hot Filter Pills -->
+                <div class="flex gap-2 flex-wrap items-center">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Quick Select:</span>
+                    <button onclick="setCategoryFilter('All')" class="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition" id="pill-all">All</button>
+                    <button onclick="setCategoryFilter('Food')" class="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 transition" id="pill-food">Food</button>
+                    <button onclick="setCategoryFilter('Bills')" class="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 transition" id="pill-bills">Bills</button>
+                    <button onclick="setCategoryFilter('Shopping')" class="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 transition" id="pill-shopping">Shopping</button>
+                    <button onclick="setCategoryFilter('Salary')" class="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 transition" id="pill-salary">Salary</button>
+                </div>
+            </div>
+
+            <!-- Big List of Transactions output database -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+                <!-- Count and summaries on bottom -->
+                <div class="flex justify-between items-center mb-5">
+                    <div>
+                        <h4 class="font-extrabold text-lg">Transaction Database</h4>
+                        <p class="text-xs text-slate-400">Total matched database: <span id="filtered-count" class="font-bold text-slate-700 dark:text-slate-200">0</span> entries</p>
+                    </div>
+                </div>
+
+                <!-- Live filtered outputs list table container -->
+                <div id="full-transactions-list" class="divide-y divide-slate-100 dark:divide-slate-800/60 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Dynamic Elements -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: REPORTS WITH GRAPHICAL CHART VISUALS -->
+        <section id="view-reports" class="space-y-6 hidden">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Group 1: Category Wise Pie Chart display details -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg">Category Wise Distribution</h3>
+                        <p class="text-xs text-slate-500 mb-4">Pie chart representing expenses split by respective categories</p>
+                    </div>
+
+                    <!-- Canvas element placeholder -->
+                    <div class="relative flex items-center justify-center p-4 min-h-[260px] max-h-[300px]">
+                        <canvas id="pieChartCanvas"></canvas>
+                        <!-- Backup visual for absolutely empty state -->
+                        <div id="pie-empty-state" class="absolute inset-0 flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 hidden">
+                            <span class="text-sm font-semibold text-slate-400">No category transactions available.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Bar Comparisons income stream compared against expenses -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg">Monthly Comparisons</h3>
+                        <p class="text-xs text-slate-500 mb-4">Compare total income flows against expenditures across active months</p>
+                    </div>
+
+                    <!-- Canvas element placeholder -->
+                    <div class="relative flex items-center justify-center p-4 min-h-[260px] max-h-[300px]">
+                        <canvas id="barChartCanvas"></canvas>
+                        <!-- Backup visual for absolutely empty state -->
+                        <div id="bar-empty-state" class="absolute inset-0 flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 hidden">
+                            <span class="text-sm font-semibold text-slate-400">No monthly metrics available.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom visual insights review summary box -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-lg mb-4">Dynamic Spending Insights</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="insights-grid">
+                    <!-- Dynamic insight cards -->
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ADD/EDIT DIALOG MODAL LAYOUT -->
+    <div id="transaction-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden px-4">
+        
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-200">
+            <!-- Modal Header -->
+            <div class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex justify-between items-center bg-slate-50 dark:bg-slate-900/80">
+                <h3 id="modal-title" class="font-bold text-lg">Add Transaction</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Forms -->
+            <div class="p-6">
+                <form id="transaction-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <input type="hidden" id="edit-id">
+
+                    <!-- Type Switch Selector Button Group -->
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Transaction Type</label>
+                        <div class="flex gap-2 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/50 dark:border-slate-800">
+                            <button type="button" id="type-btn-expense" onclick="setFormType('expense')" class="flex-1 py-2.5 rounded-lg font-bold text-sm bg-white dark:bg-slate-850 text-rose-600 dark:text-rose-400 shadow-sm border border-rose-100 dark:border-rose-950/60 transition-all">
+                                <i class="fa-solid fa-circle-arrow-down mr-1"></i> Expense
+                            </button>
+                            <button type="button" id="type-btn-income" onclick="setFormType('income')" class="flex-1 py-2.5 rounded-lg font-bold text-sm text-slate-600 dark:text-slate-400 transition-all">
+                                <i class="fa-solid fa-circle-arrow-up mr-1"></i> Income
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Row: Amount & Category -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Amount Field -->
+                        <div>
+                            <label for="form-amount" class="block text-xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Amount *</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-sm font-bold text-slate-450 dark:text-slate-550" id="form-currency-indicator">
+                                    ₹
+                                </span>
+                                <input type="number" step="0.01" id="form-amount" required placeholder="0.00" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-slate-850 dark:text-slate-100 rounded-xl pl-8 pr-3 py-2.5 text-sm outline-none font-mono font-semibold transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Category Selector -->
+                        <div>
+                            <label for="form-category" class="block text-xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Category *</label>
+                            <select id="form-category" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm cursor-pointer outline-none transition-all">
+                                <option value="Food">Food</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Row: Date Input -->
+                    <div>
+                        <label for="form-date" class="block text-xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Transaction Date *</label>
+                        <input type="date" id="form-date" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm outline-none transition-all cursor-pointer">
+                    </div>
+
+                    <!-- Description Input -->
+                    <div>
+                        <label for="form-desc" class="block text-xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Description *</label>
+                        <textarea id="form-desc" rows="3" required placeholder="What was this transaction for?" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm outline-none transition-all resize-none"></textarea>
+                    </div>
+
+                    <!-- Submit Buttons Actions group -->
+                    <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm rounded-xl transition duration-150">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl shadow-md transition duration-150">
+                            Save Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TOAST INJECTOR BOX NOTIFICATION -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none">
+        <!-- Toast instances dynamic injection -->
+    </div>
+
+    <!-- CORE LOGIC / JAVASCRIPT BLOCK -->
+    <script>
+        // System variables & persistent local database indicators
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let settings = JSON.parse(localStorage.getItem('settings')) || { theme: 'light', currency: '₹' };
+        
+        let activeTab = 'dashboard';
+        let currentFormType = 'expense'; // default form entry mode
+
+        // References to Charts to handle destroy sequences smoothly
+        let pieChartInstance = null;
+        let barChartInstance = null;
+
+        // Custom Predefined Icon Classes Mapping per unique Category type
+        const categoryConfig = {
+            Food: { bg: 'bg-orange-50 dark:bg-orange-950/25', icon: 'fa-burger', color: 'text-orange-500' },
+            Transport: { bg: 'bg-blue-50 dark:bg-blue-950/25', icon: 'fa-car-side', color: 'text-blue-500' },
+            Shopping: { bg: 'bg-pink-50 dark:bg-pink-950/25', icon: 'fa-bag-shopping', color: 'text-pink-500' },
+            Bills: { bg: 'bg-purple-50 dark:bg-purple-950/25', icon: 'fa-file-invoice-dollar', color: 'text-purple-500' },
+            Entertainment: { bg: 'bg-yellow-50 dark:bg-yellow-950/25', icon: 'fa-gamepad', color: 'text-yellow-500' },
+            Salary: { bg: 'bg-emerald-50 dark:bg-emerald-950/25', icon: 'fa-money-bill-trend-up', color: 'text-emerald-500' },
+            Other: { bg: 'bg-slate-100 dark:bg-slate-800/40', icon: 'fa-cube', color: 'text-slate-500 dark:text-slate-400' }
+        };
+
+        // Window load starting actions
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if starting run has no prior metrics, prepopulate demo
+            if (transactions.length === 0) {
+                prepopulateSampleData();
+            }
+
+            // Sync Settings & styling
+            applySettingsOnLoad();
+            
+            // Render active interfaces
+            updateDashboard();
+            applyFilters();
+            renderInsights();
+
+            // Set default date input inside modal layout
+            document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
+        });
+
+        // ==========================================
+        // 1. DATA STRUCTURING & HELPER ENGINE
+        // ==========================================
+
+        /**
+         * Prepopulates initial data inside user localstorage so dashboard starts with gorgeous visuals.
+         * उपयोगकर्ता के लिए पहला डेमो डेटा सेट अप करने का काम करता है।
+         */
+        function prepopulateSampleData() {
+            const now = new Date();
+            const formatDay = (daysAgo) => {
+                const target = new Date(now.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+                return target.toISOString().substring(0, 10);
+            };
+
+            transactions = [
+                { id: 1001, type: 'income', amount: 45000, category: 'Salary', description: 'Monthly Salary Credit', date: formatDay(0) },
+                { id: 1002, type: 'expense', amount: 12000, category: 'Bills', description: 'House Rent Payment', date: formatDay(1) },
+                { id: 1003, type: 'expense', amount: 450, category: 'Food', description: 'Swiggy Dinner Delivery', date: formatDay(2) },
+                { id: 1004, type: 'expense', amount: 1800, category: 'Shopping', description: 'Wireless Bluetooth Earphones', date: formatDay(3) },
+                { id: 1005, type: 'expense', amount: 600, category: 'Transport', description: 'Weekly Metro Smartcard Recharge', date: formatDay(4) },
+                { id: 1006, type: 'income', amount: 3500, category: 'Other', description: 'Freelance Design Commission', date: formatDay(15) },
+                { id: 1007, type: 'expense', amount: 2400, category: 'Entertainment', description: 'Cinema Multiplex & Popcorn Night', date: formatDay(12) },
+                { id: 1008, type: 'expense', amount: 850, category: 'Food', description: 'Weekly Grocery Store shopping', date: formatDay(18) },
+                { id: 1009, type: 'income', amount: 45000, category: 'Salary', description: 'Previous Month Salary', date: formatDay(30) },
+                { id: 1010, type: 'expense', amount: 12000, category: 'Bills', description: 'Previous House Rent Payment', date: formatDay(31) },
+                { id: 1011, type: 'expense', amount: 1500, category: 'Transport', description: 'Weekly Fuel Refill', date: formatDay(33) },
+                { id: 1012, type: 'expense', amount: 3200, category: 'Entertainment', description: 'Theme Park Entry Tickets', date: formatDay(35) }
+            ];
+
+            saveTransactionsToStorage();
+        }
+
+        // Transactions persistence save helper
+        function saveTransactionsToStorage() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        // Settings updates persistence helper 
+        function saveSettings() {
+            localStorage.setItem('settings', JSON.stringify(settings));
+        }
+
+        // ==========================================
+        // 2. SETTINGS & APP THEMES
+        // ==========================================
+
+        /**
+         * Apply theme and default currency selections from local variables
+         */
+        function applySettingsOnLoad() {
+            // Apply theme styling dynamically
+            if (settings.theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-icon').className = "fa-solid fa-sun text-lg text-amber-400";
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-icon').className = "fa-solid fa-moon text-lg";
+            }
+
+            // Sync Select Values
+            document.getElementById('currency-selector').value = settings.currency;
+            document.getElementById('form-currency-indicator').innerText = settings.currency;
+        }
+
+        /**
+         * Toggle Light / Dark configurations natively 
+         * डार्क और लाइट थीम के बीच स्विच करने वाला फंक्शन।
+         */
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                settings.theme = 'light';
+                document.getElementById('theme-icon').className = "fa-solid fa-moon text-lg";
+                showToast("Switched to Light Theme", "info");
+            } else {
+                document.documentElement.classList.add('dark');
+                settings.theme = 'dark';
+                document.getElementById('theme-icon').className = "fa-solid fa-sun text-lg text-amber-400";
+                showToast("Switched to Dark Theme", "info");
+            }
+            saveSettings();
+            
+            // Re-render graphs to sync their internal default texts config colors with light/dark rules
+            if (activeTab === 'reports') {
+                renderCharts();
+            }
+        }
+
+        /**
+         * Modify global currency symbol instantly 
+         * ऐप में करेंसी बदलने के लिए।
+         */
+        function changeCurrency(sym) {
+            settings.currency = sym;
+            saveSettings();
+            
+            document.getElementById('form-currency-indicator').innerText = sym;
+            
+            // Instant UI numbers re-evaluations
+            updateDashboard();
+            applyFilters();
+            renderInsights();
+
+            showToast(`Currency updated to ${sym}`, "success");
+        }
+
+        // ==========================================
+        // 3. TAB CONTROLLER SWITCHES
+        // ==========================================
+
+        /**
+         * Transition view tags cleanly under smooth indicators
+         */
+        function switchTab(targetTab) {
+            activeTab = targetTab;
+            
+            // Configure Tab selectors highlights
+            const tabButtons = ['dashboard', 'transactions', 'reports'];
+            tabButtons.forEach(btnName => {
+                const button = document.getElementById(`tab-${btnName}`);
+                if (btnName === targetTab) {
+                    button.className = "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all text-brand-600 dark:text-brand-500 bg-brand-50 dark:bg-brand-950/40 tab-btn";
+                } else {
+                    button.className = "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all text-slate-600 dark:text-slate-400 hover:text-slate-850 dark:hover:text-slate-200 tab-btn";
+                }
+            });
+
+            // Toggle screens visibility
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-transactions').classList.add('hidden');
+            document.getElementById('view-reports').classList.add('hidden');
+
+            if (targetTab === 'dashboard') {
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                updateDashboard();
+            } else if (targetTab === 'transactions') {
+                document.getElementById('view-transactions').classList.remove('hidden');
+                applyFilters();
+            } else if (targetTab === 'reports') {
+                document.getElementById('view-reports').classList.remove('hidden');
+                renderCharts();
+                renderInsights();
+            }
+        }
+
+        // ==========================================
+        // 4. RENDERING & DATA BINDINGS
+        // ==========================================
+
+        /**
+         * Renders total summary metrics and the live list rows inside dashboard screen
+         */
+        function updateDashboard() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            transactions.forEach(tx => {
+                if (tx.type === 'income') {
+                    totalIncome += tx.amount;
+                } else {
+                    totalExpense += tx.amount;
+                }
+            });
+
+            const netBalance = totalIncome - totalExpense;
+
+            // Output Widgets numerical value safely formatted
+            document.getElementById('widget-balance').innerText = `${settings.currency}${netBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('widget-income').innerText = `${settings.currency}${totalIncome.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('widget-expense').innerText = `${settings.currency}${totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Ratio progress bar calculations
+            const totalTurnover = totalIncome + totalExpense;
+            const ratioPercentSpan = document.getElementById('ratio-percent');
+            const incomeBar = document.getElementById('ratio-income-bar');
+            const expenseBar = document.getElementById('ratio-expense-bar');
+
+            if (totalTurnover === 0) {
+                ratioPercentSpan.innerText = '0%';
+                incomeBar.style.width = '0%';
+                expenseBar.style.width = '0%';
+            } else {
+                const incomePercent = (totalIncome / totalTurnover) * 100;
+                const expensePercent = (totalExpense / totalTurnover) * 100;
+                
+                ratioPercentSpan.innerText = `${Math.round((totalExpense / (totalIncome || 1)) * 100)}% of earnings`;
+                incomeBar.style.width = `${incomePercent}%`;
+                expenseBar.style.width = `${expensePercent}%`;
+            }
+
+            // Bind Top 5 Recent entries
+            const recentContainer = document.getElementById('recent-transactions-list');
+            recentContainer.innerHTML = '';
+
+            // Sort newest entries sequence
+            const sortedNewest = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const dashboardSubset = sortedNewest.slice(0, 5);
+
+            if (dashboardSubset.length === 0) {
+                recentContainer.innerHTML = `
+                    <div class="py-8 text-center text-slate-400 dark:text-slate-500">
+                        <i class="fa-solid fa-rectangle-list text-3xl mb-2 flex justify-center"></i>
+                        <p class="text-sm font-semibold">Empty Transaction Database</p>
+                    </div>
+                `;
+                return;
+            }
+
+            dashboardSubset.forEach(tx => {
+                const config = categoryConfig[tx.category] || categoryConfig.Other;
+                const sign = tx.type === 'income' ? '+' : '-';
+                const signColor = tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500';
+                const dateLabel = formatLocalTextDate(tx.date);
+
+                const rowHtml = `
+                    <div class="flex items-center justify-between py-4 group hover:bg-slate-50/50 dark:hover:bg-slate-900/30 px-2 rounded-xl transition-all">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center ${config.color} shrink-0">
+                                <i class="fa-solid ${config.icon} text-lg"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold max-w-[130px] sm:max-w-xs truncate" title="${tx.description}">${tx.description}</h4>
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/40 dark:border-slate-800">${tx.category}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <p class="text-sm font-extrabold font-mono ${signColor}">${sign}${settings.currency}${tx.amount.toLocaleString('en-IN')}</p>
+                                <p class="text-[10px] font-semibold text-slate-400">${dateLabel}</p>
+                            </div>
+                            <div class="flex items-center gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editTransaction(${tx.id})" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sky-600 dark:text-sky-500" title="Edit row">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteTransaction(${tx.id})" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-rose-600 dark:text-rose-550" title="Delete row">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                recentContainer.insertAdjacentHTML('beforeend', rowHtml);
+            });
+        }
+
+        /**
+         * Performs reactivity filtering inside database list and binds table.
+         * खोज और फ़िल्टर नियमों के आधार पर लिस्ट को अपडेट करता है।
+         */
+        function applyFilters() {
+            const query = document.getElementById('filter-search').value.toLowerCase().trim();
+            const categoryMatch = document.getElementById('filter-category').value;
+            const startDateStr = document.getElementById('filter-start-date').value;
+            const endDateStr = document.getElementById('filter-end-date').value;
+
+            // Apply filters logic
+            let matched = transactions.filter(tx => {
+                const matchesText = tx.description.toLowerCase().includes(query) || 
+                                    tx.category.toLowerCase().includes(query) ||
+                                    tx.amount.toString().includes(query);
+
+                const matchesCategory = categoryMatch === 'All' || tx.category === categoryMatch;
+                
+                const matchesStart = !startDateStr || new Date(tx.date) >= new Date(startDateStr);
+                const matchesEnd = !endDateStr || new Date(tx.date) <= new Date(endDateStr);
+
+                return matchesText && matchesCategory && matchesStart && matchesEnd;
+            });
+
+            // Sort newly filtered elements
+            matched.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            // Set matched size count
+            document.getElementById('filtered-count').innerText = matched.length;
+
+            const container = document.getElementById('full-transactions-list');
+            container.innerHTML = '';
+
+            if (matched.length === 0) {
+                container.innerHTML = `
+                    <div class="py-12 text-center text-slate-400 dark:text-slate-500">
+                        <i class="fa-solid fa-database text-4xl mb-2 flex justify-center text-slate-300 dark:text-slate-700"></i>
+                        <p class="text-sm font-semibold">No Transactions match your current filters.</p>
+                        <button onclick="resetFilters()" class="text-xs font-bold text-brand-600 mt-2 underline">Reset Filters</button>
+                    </div>
+                `;
+                return;
+            }
+
+            matched.forEach(tx => {
+                const config = categoryConfig[tx.category] || categoryConfig.Other;
+                const sign = tx.type === 'income' ? '+' : '-';
+                const signColor = tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500';
+                const dateLabel = formatLocalTextDate(tx.date);
+
+                const rowHtml = `
+                    <div class="flex items-center justify-between py-4 group hover:bg-slate-50/50 dark:hover:bg-slate-900/30 px-2 rounded-xl transition-all">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center ${config.color} shrink-0">
+                                <i class="fa-solid ${config.icon} text-lg"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold max-w-[150px] sm:max-w-md truncate" title="${tx.description}">${tx.description}</h4>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-550 dark:text-slate-400 border border-slate-200/30 dark:border-slate-800/80">${tx.category}</span>
+                                    <span class="text-[10px] text-slate-400 font-semibold">${dateLabel}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <p class="text-sm font-extrabold font-mono ${signColor}">${sign}${settings.currency}${tx.amount.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div class="flex items-center gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editTransaction(${tx.id})" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sky-600 dark:text-sky-500" title="Edit row">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteTransaction(${tx.id})" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-rose-600 dark:text-rose-550" title="Delete row">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', rowHtml);
+            });
+        }
+
+        /**
+         * Reset all filtered selections instantly
+         */
+        function resetFilters() {
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-category').value = 'All';
+            document.getElementById('filter-start-date').value = '';
+            document.getElementById('filter-end-date').value = '';
+
+            // Clean active quick selecting pill styling
+            const pills = ['all', 'food', 'bills', 'shopping', 'salary'];
+            pills.forEach(pill => {
+                const el = document.getElementById(`pill-${pill}`);
+                if (pill === 'all') {
+                    el.className = "px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition";
+                } else {
+                    el.className = "px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 transition";
+                }
+            });
+
+            applyFilters();
+            showToast("Filters successfully reset", "info");
+        }
+
+        /**
+         * Highlighting category filter pill quickly
+         */
+        function setCategoryFilter(category) {
+            document.getElementById('filter-category').value = category;
+
+            const pills = ['all', 'food', 'bills', 'shopping', 'salary'];
+            pills.forEach(pill => {
+                const el = document.getElementById(`pill-${pill}`);
+                if (pill === category.toLowerCase()) {
+                    el.className = "px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-indigo-800 bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-500 transition shadow-sm";
+                } else {
+                    // Reset others
+                    el.className = "px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 transition";
+                }
+            });
+
+            applyFilters();
+        }
+
+        // Helper: formats HTML date format cleanly to localized presentation
+        function formatLocalTextDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // ==========================================
+        // 5. CHARTS DRAWINGS (CHART.JS CDN INTEGRATOR)
+        // ==========================================
+
+        /**
+         * Re-compiles charts logic cleanly based on dark/light mode configurations
+         * चार्ट्स को रेंडर करने और रिफ्रेश करने की जिम्मेदारी।
+         */
+        function renderCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const defaultTextTheme = isDark ? '#cbd5e1' : '#475569';
+            const defaultBorderTheme = isDark ? '#334155' : '#f1f5f9';
+
+            // Extract Expense Breakdown Data
+            const pieDataMap = {};
+            // Preset values
+            Object.keys(categoryConfig).forEach(cat => {
+                if (cat !== 'Salary') pieDataMap[cat] = 0;
+            });
+
+            transactions.filter(t => t.type === 'expense').forEach(tx => {
+                if (pieDataMap[tx.category] !== undefined) {
+                    pieDataMap[tx.category] += tx.amount;
+                } else {
+                    pieDataMap.Other += tx.amount;
+                }
+            });
+
+            // Filter out empty zeros category values to make chart beautiful
+            const chartLabels = [];
+            const chartValues = [];
+            const bgColorsList = [];
+
+            const colorMapping = {
+                Food: '#ffa726',
+                Transport: '#29b6f6',
+                Shopping: '#ec407a',
+                Bills: '#ab47bc',
+                Entertainment: '#ffd54f',
+                Other: '#78909c'
+            };
+
+            Object.entries(pieDataMap).forEach(([cat, val]) => {
+                if (val > 0) {
+                    chartLabels.push(cat);
+                    chartValues.push(val);
+                    bgColorsList.push(colorMapping[cat] || '#94a3b8');
+                }
+            });
+
+            // Handle Destroy / recreate sequences
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+            }
+
+            if (chartValues.length === 0) {
+                document.getElementById('pie-empty-state').classList.remove('hidden');
+            } else {
+                document.getElementById('pie-empty-state').classList.add('hidden');
+                const ctxPie = document.getElementById('pieChartCanvas').getContext('2d');
+                pieChartInstance = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartValues,
+                            backgroundColor: bgColorsList,
+                            borderWidth: isDark ? 2 : 1,
+                            borderColor: isDark ? '#0f172a' : '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: defaultTextTheme,
+                                    font: { family: 'Plus Jakarta Sans', size: 10, weight: 'bold' }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- BAR CHART COMPILATION ---
+            // Group spending/earnings by Month indicator labels
+            const monthlyDataMap = {};
+
+            transactions.forEach(tx => {
+                const dateObj = new Date(tx.date);
+                const monthName = dateObj.toLocaleDateString('en-US', { month: '2-digit', year: '2-digit' }); // eg 05/23
+                const monthLong = dateObj.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); // eg May 23
+                
+                if (!monthlyDataMap[monthName]) {
+                    monthlyDataMap[monthName] = { label: monthLong, income: 0, expense: 0, time: dateObj.getTime() };
+                }
+
+                if (tx.type === 'income') {
+                    monthlyDataMap[monthName].income += tx.amount;
+                } else {
+                    monthlyDataMap[monthName].expense += tx.amount;
+                }
+            });
+
+            // Sort months sequentially
+            const sortedMonthsKeys = Object.entries(monthlyDataMap)
+                .sort((a, b) => a[1].time - b[1].time)
+                .slice(-6); // Keep last 6 active months for readability
+
+            const barMonthsLabels = sortedMonthsKeys.map(key => key[1].label);
+            const barIncomeMetrics = sortedMonthsKeys.map(key => key[1].income);
+            const barExpenseMetrics = sortedMonthsKeys.map(key => key[1].expense);
+
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+
+            if (sortedMonthsKeys.length === 0) {
+                document.getElementById('bar-empty-state').classList.remove('hidden');
+            } else {
+                document.getElementById('bar-empty-state').classList.add('hidden');
+                const ctxBar = document.getElementById('barChartCanvas').getContext('2d');
+                barChartInstance = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: barMonthsLabels,
+                        datasets: [
+                            {
+                                label: 'Income',
+                                data: barIncomeMetrics,
+                                backgroundColor: '#10b981',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Expenses',
+                                data: barExpenseMetrics,
+                                backgroundColor: '#f43f5e',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                grid: { color: defaultBorderTheme },
+                                ticks: {
+                                    color: defaultTextTheme,
+                                    font: { family: 'JetBrains Mono', size: 10 }
+                                }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    color: defaultTextTheme,
+                                    font: { family: 'Plus Jakarta Sans', weight: 'bold', size: 10 }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: defaultTextTheme,
+                                    font: { family: 'Plus Jakarta Sans', size: 11, weight: 'semibold' }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        /**
+         * Gather metrics insights dynamically inside table
+         * विश्लेषण (Insights) की गणना करने वाला फंक्शन।
+         */
+        function renderInsights() {
+            const insightsGrid = document.getElementById('insights-grid');
+            insightsGrid.innerHTML = '';
+
+            let totalIn = 0;
+            let totalOut = 0;
+            
+            transactions.forEach(t => {
+                if (t.type === 'income') totalIn += t.amount;
+                else totalOut += t.amount;
+            });
+
+            // 1. Highest Expense calculation
+            const expensesList = transactions.filter(t => t.type === 'expense');
+            const maxExpenseObj = expensesList.length > 0 ? expensesList.reduce((max, obj) => obj.amount > max.amount ? obj : max, expensesList[0]) : null;
+
+            // 2. Spending percentage
+            const savingsRate = totalIn > 0 ? Math.round(((totalIn - totalOut) / totalIn) * 100) : 0;
+            
+            insightsGrid.innerHTML = `
+                <!-- Savings Card -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Savings Rate</p>
+                    <h4 class="text-xl font-extrabold ${savingsRate >= 20 ? 'text-emerald-500' : 'text-amber-500'} font-mono">${savingsRate}%</h4>
+                    <p class="text-[11px] text-slate-500 mt-1">${savingsRate >= 20 ? 'Healthy saving rate! Good job.' : 'Try setting aside at least 20% of gains.'}</p>
+                </div>
+
+                <!-- Biggest single leak -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Biggest Spend</p>
+                    <h4 class="text-xl font-extrabold text-rose-500 font-mono">${maxExpenseObj ? settings.currency + maxExpenseObj.amount.toLocaleString() : 'None'}</h4>
+                    <p class="text-[11px] text-slate-500 mt-1 truncate" title="${maxExpenseObj ? maxExpenseObj.description : 'Explore catalog'}">
+                        ${maxExpenseObj ? `On: ${maxExpenseObj.description}` : 'No spendings logged.'}
+                    </p>
+                </div>
+
+                <!-- Total active listings -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Data Weight</p>
+                    <h4 class="text-xl font-extrabold text-indigo-500 font-mono">${transactions.length} Records</h4>
+                    <p class="text-[11px] text-slate-500 mt-1">Natively cached in client local storage.</p>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 6. MODAL INTERFACES & FORMS
+        // ==========================================
+
+        /**
+         * Trigger layout overlay showing
+         */
+        function openModal() {
+            document.getElementById('transaction-modal').classList.remove('hidden');
+            document.getElementById('modal-title').innerText = "Add Transaction";
+            document.getElementById('edit-id').value = '';
+            document.getElementById('transaction-form').reset();
+            
+            // Re-sync modal dates & currencies default pointers
+            document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
+            setFormType('expense');
+        }
+
+        /**
+         * Hides form overlay
+         */
+        function closeModal() {
+            document.getElementById('transaction-modal').classList.add('hidden');
+        }
+
+        /**
+         * Swap dynamic styles Inside switch buttons Inside modal layout 
+         * ट्रांजैक्शन टाइप (Income/Expense) को बदलने का फंक्शन।
+         */
+        function setFormType(type) {
+            currentFormType = type;
+            const btnExpense = document.getElementById('type-btn-expense');
+            const btnIncome = document.getElementById('type-btn-income');
+
+            if (type === 'expense') {
+                btnExpense.className = "flex-1 py-2.5 rounded-lg font-bold text-sm bg-white dark:bg-slate-850 text-rose-600 dark:text-rose-400 shadow-sm border border-rose-100 dark:border-rose-950/60 transition-all";
+                btnIncome.className = "flex-1 py-2.5 rounded-lg font-bold text-sm text-slate-500 dark:text-slate-400 transition-all";
+                document.getElementById('form-category').value = 'Food';
+            } else {
+                btnIncome.className = "flex-1 py-2.5 rounded-lg font-bold text-sm bg-white dark:bg-slate-850 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-100 dark:border-emerald-950/60 transition-all";
+                btnExpense.className = "flex-1 py-2.5 rounded-lg font-bold text-sm text-slate-500 dark:text-slate-400 transition-all";
+                document.getElementById('form-category').value = 'Salary';
+            }
+        }
+
+        /**
+         * Handle Edit triggers sequentially
+         */
+        function editTransaction(id) {
+            const target = transactions.find(t => t.id === id);
+            if (!target) return;
+
+            openModal();
+
+            // Populate Form Details
+            document.getElementById('modal-title').innerText = "Edit Transaction";
+            document.getElementById('edit-id').value = target.id;
+            document.getElementById('form-amount').value = target.amount;
+            document.getElementById('form-category').value = target.category;
+            document.getElementById('form-date').value = target.date;
+            document.getElementById('form-desc').value = target.description;
+
+            setFormType(target.type);
+        }
+
+        /**
+         * Submits transaction forms validating and adding to storage
+         * डेटा सबमिट करने और लोकल स्टोरेज में सहेजने का काम।
+         */
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const editIdStr = document.getElementById('edit-id').value;
+            const amount = parseFloat(document.getElementById('form-amount').value);
+            const category = document.getElementById('form-category').value;
+            const date = document.getElementById('form-date').value;
+            const description = document.getElementById('form-desc').value.trim();
+
+            if (isNaN(amount) || amount <= 0) {
+                showToast("Please supply a valid payment amount", "error");
+                return;
+            }
+
+            if (editIdStr) {
+                // UPDATE SEQUENCE 
+                const id = parseInt(editIdStr);
+                const index = transactions.findIndex(t => t.id === id);
+                if (index !== -1) {
+                    transactions[index] = {
+                        id,
+                        type: currentFormType,
+                        amount,
+                        category,
+                        description,
+                        date
+                    };
+                    showToast("Transaction updated success", "success");
+                }
+            } else {
+                // INSERT NEW ROW SEQUENCE 
+                const newTx = {
+                    id: Date.now(),
+                    type: currentFormType,
+                    amount,
+                    category,
+                    description,
+                    date
+                };
+                transactions.push(newTx);
+                showToast(`Added successfully: ${newTx.category} (${amount})`, "success");
+            }
+
+            saveTransactionsToStorage();
+            closeModal();
+
+            // Screen layout refreshes
+            if (activeTab === 'dashboard') updateDashboard();
+            else if (activeTab === 'transactions') applyFilters();
+            else if (activeTab === 'reports') {
+                renderCharts();
+                renderInsights();
+            }
+        }
+
+        /**
+         * Remove targeted transaction instantly
+         */
+        function deleteTransaction(id) {
+            if (confirm("Are you positive you wish to remove this row entry?")) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveTransactionsToStorage();
+
+                showToast("Transaction deleted successfully", "success");
+
+                // Layout updates
+                if (activeTab === 'dashboard') updateDashboard();
+                else if (activeTab === 'transactions') applyFilters();
+                else if (activeTab === 'reports') {
+                    renderCharts();
+                    renderInsights();
+                }
+            }
+        }
+
+        // ==========================================
+        // 7. TOAST NOTIFICATION UTILITIES
+        // ==========================================
+
+        /**
+         * Spawns a floating popup alert dynamic module 
+         * स्क्रीन पर तुरंत टोस्ट संदेश दिखाने के लिए।
+         */
+        function showToast(text, status = 'success') {
+            const container = document.getElementById('toast-container');
+            const id = 'toast-' + Date.now();
+
+            let colorClasses = "bg-emerald-500 text-white border border-emerald-400";
+            let statusIcon = "fa-circle-check";
+
+            if (status === 'error') {
+                colorClasses = "bg-rose-500 text-white border border-rose-400";
+                statusIcon = "fa-triangle-exclamation";
+            } else if (status === 'info') {
+                colorClasses = "bg-slate-800 text-slate-100 border border-slate-700";
+                statusIcon = "fa-circle-info";
+            }
+
+            const toastHtml = `
+                <div id="${id}" class="${colorClasses} flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all duration-300 translate-y-6 opacity-0 animate-in slide-in-from-bottom duration-250">
+                    <i class="fa-solid ${statusIcon}"></i>
+                    <span>${text}</span>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const spawnedNode = document.getElementById(id);
+
+            // Animate In Entry
+            setTimeout(() => {
+                spawnedNode.style.transform = 'translateY(0)';
+                spawnedNode.style.opacity = '1';
+            }, 50);
+
+            // Trigger Automatic Leave
+            setTimeout(() => {
+                spawnedNode.style.transform = 'translateY(-12px)';
+                spawnedNode.style.opacity = '0';
+                
+                // Clear node from DOM layout
+                setTimeout(() => {
+                    spawnedNode.remove();
+                }, 300);
+            }, 3000);
+        }
+
+    </script>
+</body>
+</html>
